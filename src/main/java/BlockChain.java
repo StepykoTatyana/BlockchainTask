@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.io.Serializable;
+import java.security.Signature;
 import java.util.*;
 
 public class BlockChain implements Serializable {
@@ -11,10 +12,27 @@ public class BlockChain implements Serializable {
     private long magicNumber;
     private int countZero;
     List<BlockChain> blockChains;
-    List<String> messages;
-    List<String> messagesPrevious;
+    static int idMessage = 0;
     static int i = 0;
-    static List<String> list;
+    List<Message> messagesPrevious;
+    List<Message> listMessage;
+
+    public int getId() {
+        return Id;
+    }
+
+    public long getTimestamp() {
+        return Timestamp;
+    }
+
+    public int getCountZero() {
+        return countZero;
+    }
+
+    public List<Message> getListMessage() {
+        return listMessage;
+    }
+
     static List<String> listConst = List.of(
             "Tom: Hey, I'm first!",
             "Tom: Hey, I'm second also!",
@@ -32,28 +50,12 @@ public class BlockChain implements Serializable {
             "Tanya: Nice to meet you Nick",
             "Tanya: Nice to meet you Tom",
             "Tanya: Nice to meet you Sarah",
+            "Nick: Hey, I'm a artist111!",
+            "Tanya: Nice to meet you Nick111",
+            "Tanya: Nice to meet you Tom111",
+            "Tanya: Nice to meet you Sarah111",
             "Tom: Nice to meet you");
 
-
-    public List<String> getMessages() {
-        return messages;
-    }
-
-    public void setMessages(List<String> messages) {
-        this.messages = messages;
-    }
-
-    public int getCountZero() {
-        return countZero;
-    }
-
-    public int getId() {
-        return Id;
-    }
-
-    public long getTimestamp() {
-        return Timestamp;
-    }
 
     public void printData() {
         long threadId = Thread.currentThread().getId();
@@ -72,7 +74,7 @@ public class BlockChain implements Serializable {
                 System.out.println("Block data: no messages");
             } else {
                 System.out.println("Block data:");
-                messagesPrevious.forEach(System.out::println);
+                messagesPrevious.forEach(x -> System.out.println(x.getData()));
             }
         } else {
             System.out.println("Block data: no messages");
@@ -94,89 +96,108 @@ public class BlockChain implements Serializable {
 
     }
 
-
     public String getHashOfTheBlock() {
         return HashOfTheBlock;
     }
 
-    public BlockChain(int id, List<BlockChain> blockChainList) {
-        Id = id;
-        blockChains = blockChainList;
-        Timestamp = new Date().getTime();
+    public BlockChain(int id, List<BlockChain> blockChainList) throws Exception {
+        this.Id = id;
+        this.blockChains = blockChainList;
+        this.Timestamp = new Date().getTime();
+
         if (Id == 1) {
-            HashOfThePreviousBlock = "0";
-            countZero = 0;
-            messagesPrevious = null;
+            this.HashOfThePreviousBlock = "0";
+            this.countZero = 0;
+            this.messagesPrevious = null;
         } else {
             if (blockChains != null) {
                 getHashPrevious();
-                countZero = blockChainList.get(blockChainList.size() - 1).getCountZero();
-                messagesPrevious = getHashPreviousMessage();
+                this.countZero = blockChainList.get(blockChainList.size() - 1).getCountZero();
+                this.messagesPrevious = getHashPreviousMessage();
             }
         }
         HashOfTheBlock = generateHash();
-        messages = list;
 
     }
 
 
-    public String generateHash() {
+    public String generateHash() throws Exception {
         String hashCode = "";
         Random random = new Random();
         int k = 0;
         magicNumber = random.nextLong();
         if (Id == 1) {
-            list = new ArrayList<>();
-            list.add(listConst.get(i));
-            i++;
+            listMessage = new ArrayList<>();
+            idMessage = random.nextInt();
+            Message message = new Message(listConst.get(i), idMessage);
+            if (verifySignature(message)){
+                listMessage.add(message);
+                i++;
+            }
             return StringUtil.applySha256(Id + String.valueOf(Timestamp) + HashOfThePreviousBlock + magicNumber);
         } else {
-            list = new ArrayList<>();
+            listMessage = new ArrayList<>();
             while (!hashCode.startsWith(stringMultiply(countZero))) {
-                if (k % 4000 == 0) {
-                    list.add(listConst.get(i));
-                    i++;
-                    System.out.println(list);
+                if (k % 8000 == 0) {
+                    if (listMessage.size() == 0) {
+                        idMessage = random.nextInt();
+                    } else {
+                        int max = listMessage.stream().reduce((x, y) -> x.getId() > y.getId() ? x : y).get().getId();
+                        idMessage = random.nextInt();
+                        while (idMessage < max) {
+                            idMessage = random.nextInt();
+                        }
+                    }
+                    Message message = new Message(listConst.get(i), idMessage);
+                    if (verifySignature(message)){
+                        listMessage.add(message);
+                        i++;
+                    }
                 }
                 hashCode = StringUtil.applySha256(Id + String.valueOf(Timestamp) + HashOfThePreviousBlock + magicNumber);
                 magicNumber = random.nextLong();
                 k++;
-
             }
             return hashCode;
         }
+
     }
 
     public static String stringMultiply(int n) {
         return "0".repeat(Math.max(0, n));
     }
 
-    public String getHashPrevious() {
+    public void getHashPrevious() {
         String fileName = "blockchains.data";
         BlockChain[] blockChains1 = blockChains.toArray(new BlockChain[0]);
         try {
             SerializationUtils.serialize(blockChains1, fileName);
             BlockChain[] blockChainList = (BlockChain[]) SerializationUtils.deserialize(fileName);
             HashOfThePreviousBlock = blockChainList[Id - 2].getHashOfTheBlock();
-            return HashOfThePreviousBlock;
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private List<Message> getHashPreviousMessage() {
+        String fileName = "blockchains.data";
+        BlockChain[] blockChains1 = blockChains.toArray(new BlockChain[0]);
+        try {
+            SerializationUtils.serialize(blockChains1, fileName);
+            BlockChain[] blockChainList = (BlockChain[]) SerializationUtils.deserialize(fileName);
+            return blockChainList[Id - 2].getListMessage();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
             return null;
         }
     }
 
-
-    private List<String> getHashPreviousMessage() {
-        String fileName = "blockchains.data";
-        BlockChain[] blockChains1 = blockChains.toArray(new BlockChain[0]);
-        try {
-            SerializationUtils.serialize(blockChains1, fileName);
-            BlockChain[] blockChainList = (BlockChain[]) SerializationUtils.deserialize(fileName);
-            messages = blockChainList[Id - 2].getMessages();
-            return messages;
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-            return null;
-        }
+    private boolean verifySignature(Message message) throws Exception {
+        Signature sig = Signature.getInstance("SHA1withRSA");
+        sig.initVerify(message.getPublicKey());
+        sig.update((byte) message.getId());
+        sig.update(message.getData().getBytes());
+        return sig.verify(message.getSignature());
     }
 }
