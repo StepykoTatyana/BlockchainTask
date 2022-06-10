@@ -8,22 +8,14 @@ public class BlockChain implements Serializable {
     private final int Id;
     private final long Timestamp;
     private String HashOfThePreviousBlock;
+    long elapsedNanos;
     private final String HashOfTheBlock;
     private long magicNumber;
     private int countZero;
     List<BlockChain> blockChains;
     static int idMessage = 0;
-    static int i = 0;
     List<Message> messagesPrevious;
     List<Message> listMessage;
-
-    public int getId() {
-        return Id;
-    }
-
-    public long getTimestamp() {
-        return Timestamp;
-    }
 
     public int getCountZero() {
         return countZero;
@@ -33,35 +25,12 @@ public class BlockChain implements Serializable {
         return listMessage;
     }
 
-    static List<String> listConst = List.of(
-            "Tom: Hey, I'm first!",
-            "Tom: Hey, I'm second also!",
-            "Sarah: It's not fair!",
-            "Sarah: You always will be first because it is your blockchain!",
-            "Sarah: Anyway, thank you for this amazing chat.",
-            "Tom: You're welcome :)",
-            "Nick: Hey Tom, nice chat",
-            "Tanya: Hey, I'm Tanya!",
-            "Tanya: I'm Norway!",
-            "Tanya: I'm developer, and you?",
-            "Tom: Hey, I'm a student!",
-            "Sarah: Hey, I'm a professor!",
-            "Nick: Hey, I'm a artist!",
-            "Tanya: Nice to meet you Nick",
-            "Tanya: Nice to meet you Tom",
-            "Tanya: Nice to meet you Sarah",
-            "Nick: Hey, I'm a artist111!",
-            "Tanya: Nice to meet you Nick111",
-            "Tanya: Nice to meet you Tom111",
-            "Tanya: Nice to meet you Sarah111",
-            "Tom: Nice to meet you");
-
-
     public void printData() {
         long threadId = Thread.currentThread().getId();
         System.out.println();
         System.out.println("Block:");
         System.out.println("Created by miner #" + threadId);
+        System.out.println(threadId + " gets 100 VC");
         System.out.println("Id: " + Id);
         System.out.println("Timestamp: " + Timestamp);
         System.out.println("Magic number: " + magicNumber);
@@ -77,16 +46,14 @@ public class BlockChain implements Serializable {
                 messagesPrevious.forEach(x -> System.out.println(x.getData()));
             }
         } else {
-            System.out.println("Block data: no messages");
+            System.out.println("Block data:");
+            System.out.println("No transactions");
         }
-
-        long elapsedNanos = new Date().getTime() - Timestamp;
-
-        System.out.printf("Block was generating for %d seconds\n", (int) elapsedNanos / 1000);
-        if (elapsedNanos / 1000 < 15) {
+        System.out.printf("Block was generating for %d seconds\n", (int) elapsedNanos / 10);
+        if (elapsedNanos / 10 < 15) {
             countZero = countZero + 1;
             System.out.println("N was increased to " + countZero);
-        } else if (elapsedNanos / 1000 >= 15 && elapsedNanos / 1000 < 60) {
+        } else if (elapsedNanos / 10 >= 15 && elapsedNanos / 10 < 60) {
             System.out.println("N stays the same");
         } else {
             countZero = countZero - 1;
@@ -104,7 +71,7 @@ public class BlockChain implements Serializable {
         this.Id = id;
         this.blockChains = blockChainList;
         this.Timestamp = new Date().getTime();
-
+        this.elapsedNanos = 0;
         if (Id == 1) {
             this.HashOfThePreviousBlock = "0";
             this.countZero = 0;
@@ -124,21 +91,22 @@ public class BlockChain implements Serializable {
     public String generateHash() throws Exception {
         String hashCode = "";
         Random random = new Random();
-        int k = 0;
         magicNumber = random.nextLong();
         if (Id == 1) {
             listMessage = new ArrayList<>();
             idMessage = random.nextInt();
-            Message message = new Message(listConst.get(i), idMessage);
-            if (verifySignature(message)){
+            int a = random.nextInt(100);
+            String str = generateString() + " sent " + a + " VC to " + generateString();
+            Message message = new Message(str, idMessage);
+            if (verifySignature(message)) {
                 listMessage.add(message);
-                i++;
+                //i++;
             }
             return StringUtil.applySha256(Id + String.valueOf(Timestamp) + HashOfThePreviousBlock + magicNumber);
         } else {
             listMessage = new ArrayList<>();
             while (!hashCode.startsWith(stringMultiply(countZero))) {
-                if (k % 8000 == 0) {
+                if (magicNumber % 5000 == 0) {
                     if (listMessage.size() == 0) {
                         idMessage = random.nextInt();
                     } else {
@@ -148,16 +116,18 @@ public class BlockChain implements Serializable {
                             idMessage = random.nextInt();
                         }
                     }
-                    Message message = new Message(listConst.get(i), idMessage);
-                    if (verifySignature(message)){
+                    int a = random.nextInt(100);
+                    Message message = new Message(generateString() + " sent " + a + " VC to " + generateString(), idMessage);
+                    if (verifySignature(message)) {
                         listMessage.add(message);
-                        i++;
+                        //i++;
                     }
                 }
                 hashCode = StringUtil.applySha256(Id + String.valueOf(Timestamp) + HashOfThePreviousBlock + magicNumber);
                 magicNumber = random.nextLong();
-                k++;
+
             }
+            elapsedNanos = new Date().getTime() - Timestamp;
             return hashCode;
         }
 
@@ -199,5 +169,21 @@ public class BlockChain implements Serializable {
         sig.update((byte) message.getId());
         sig.update(message.getData().getBytes());
         return sig.verify(message.getSignature());
+    }
+
+    public String generateString() {
+        int leftLimit = 97; // letter 'a'
+        int rightLimit = 122; // letter 'z'
+        int targetStringLength = 7;
+        Random random = new Random();
+        StringBuilder buffer = new StringBuilder(targetStringLength);
+        for (int i = 0; i < targetStringLength; i++) {
+            int randomLimitedInt = leftLimit + (int)
+                    (random.nextFloat() * (rightLimit - leftLimit + 1));
+            buffer.append((char) randomLimitedInt);
+        }
+        String generatedString = buffer.toString();
+        generatedString = generatedString.substring(0, 1).toUpperCase() + generatedString.substring(1);
+        return generatedString;
     }
 }
