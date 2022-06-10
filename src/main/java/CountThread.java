@@ -20,10 +20,10 @@ class CountThread implements Runnable {
 
     public void run() {
         synchronized (res) {
-                System.out.println("NAME" + Thread.currentThread().getName());
+                //System.out.println("NAME" + Thread.currentThread().getName());
                 res.printData();
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(1000);
                 } catch (InterruptedException ignored) {
                 }
 
